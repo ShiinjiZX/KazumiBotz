@@ -1,0 +1,46 @@
+// • Feature : Claude Ai
+// • Credits : https://whatsapp.com/channel/0029Vb4fjWE1yT25R7epR110
+
+import fetch from 'node-fetch';
+
+let chatHistory = {};
+
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+  if (!text) throw `Contoh: ${usedPrefix + command} hai`;
+  
+  try {
+    let chatId = m.chat;
+
+    if (!chatHistory[chatId]) chatHistory[chatId] = [];
+
+    chatHistory[chatId].push(`User: ${text}`);
+
+    let conversation = chatHistory[chatId].join("\n");
+
+    let url = `https://anabot.my.id/api/ai/chat?question=${encodeURIComponent(conversation)}&model=claude-3.7&apikey=freeApikey`; // model lainnya grok-3-mini, gpt-4o, llama-3.3
+
+    const response = await fetch(url);
+    const json = await response.json();
+
+    const replyMessage = json.data.result.response || "⚠️ Tidak ada jawaban dari API";
+
+    chatHistory[chatId].push(`Bot: ${replyMessage}`);
+
+    if (chatHistory[chatId].length > 10) {
+      chatHistory[chatId] = chatHistory[chatId].slice(-10);
+    }
+
+    await conn.sendMessage(m.chat, { text: replyMessage }, { quoted: m });
+
+  } catch (e) {
+    console.error('Error:', e);
+    m.reply('🚨 Error: ' + (e.message || e));
+  }
+}
+
+handler.help = ['claude <pertanyaan>'];
+handler.tags = ['ai'];
+handler.command = ['claude'];
+handler.limit = true;
+
+export default handler;
